@@ -56,12 +56,6 @@ function resolvePageBg(productBgColor: string, autoSourceBg: string): string {
   return parsed ? toCssBackground(parsed) : autoSourceBg;
 }
 
-const PLANS = [
-  { key: "FREE" as const, label: "Free", price: 0, features: ["Up to 10 products", "Basic storefront", "Standard support"] },
-  { key: "PRO" as const, label: "Pro", price: 999, features: ["Up to 100 products", "Priority support", "Coupon creation"] },
-  { key: "PREMIUM" as const, label: "Premium", price: 2499, features: ["Unlimited products", "Advanced analytics", "Priority visibility", "Featured listings"] },
-];
-
 const DEFAULT_SEGMENTS = [
   { label: "5% OFF",    code: "WIN5",  color: "#f43f5e" },
   { label: "Try Again", code: "",      color: "#94a3b8" },
@@ -80,7 +74,6 @@ export default function SellerSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
   const [storeNameValue, setStoreNameValue] = useState("");
-  const [currentPlan, setCurrentPlan] = useState("FREE");
   const [logoUrls, setLogoUrls] = useState<string[]>([]);
   const [storeColor, setStoreColor] = useState<string>("");
   const [colorSaving, setColorSaving] = useState(false);
@@ -165,7 +158,6 @@ export default function SellerSettingsPage() {
           if (data.logo) setLogoUrls([data.logo]);
         setSellerId(data.seller?.sellerId || "");
         setStoreHandle(data.seller?.storeHandle || null);
-        setCurrentPlan(data.subscription?.plan || "FREE");
         setIsLocalStore(data.seller?.isLocalStore ?? false);
         setStoreAddress(data.seller?.storeAddress ?? "");
         setPickupHours(data.seller?.pickupHours ?? "");
@@ -524,7 +516,7 @@ export default function SellerSettingsPage() {
             <span className="text-[12px] text-foreground font-medium">Settings</span>
           </div>
           <h1 className="text-xl font-semibold">Settings</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Manage your store profile and subscription</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">Manage your store profile</p>
         </div>
         <Link href="/">
           <button className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2.5 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-sm">
@@ -542,7 +534,6 @@ export default function SellerSettingsPage() {
           <TabsTrigger value="features">Store Features</TabsTrigger>
           <TabsTrigger value="tags">Quick Tags</TabsTrigger>
           <TabsTrigger value="shake" onClick={loadShakeProducts}>Shake</TabsTrigger>
-          <TabsTrigger value="subscription">Subscription</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -1431,45 +1422,6 @@ export default function SellerSettingsPage() {
             <Button onClick={saveShake} disabled={shakeLoading}>
               {shakeLoading ? "Saving…" : "Save Shake Settings"}
             </Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="subscription">
-          <div className="max-w-3xl">
-            <p className="mb-6 text-sm text-muted-foreground">
-              Current plan: <strong>{currentPlan}</strong>
-            </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {PLANS.map((plan) => {
-                const isCurrent = currentPlan === plan.key;
-                return (
-                  <div key={plan.key} className={`relative rounded-xl border p-5 ${isCurrent ? "border-foreground bg-foreground text-background" : "border-border/50 bg-card"}`}>
-                    {isCurrent && (
-                      <div className="absolute right-3 top-3 rounded-full bg-background/20 px-2 py-0.5 text-[10px] font-medium">Current</div>
-                    )}
-                    <h3 className="font-semibold">{plan.label}</h3>
-                    <div className="mt-1 text-2xl font-bold">
-                      {plan.price === 0 ? "Free" : `${formatPrice(plan.price)}/yr`}
-                    </div>
-                    <ul className="mt-4 space-y-1.5">
-                      {plan.features.map((f) => (
-                        <li key={f} className={`flex items-center gap-2 text-xs ${isCurrent ? "text-background/80" : "text-muted-foreground"}`}>
-                          <Check className="h-3 w-3 shrink-0" />{f}
-                        </li>
-                      ))}
-                    </ul>
-                    {plan.key !== "FREE" && !isCurrent && (
-                      <Button
-                        className="mt-5 w-full" variant="outline" size="sm"
-                        onClick={() => toast.info("Connect Razorpay to process payment")}
-                      >
-                        Upgrade to {plan.label}
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </TabsContent>
       </Tabs>

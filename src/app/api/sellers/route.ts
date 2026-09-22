@@ -117,17 +117,6 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create free subscription (1 year)
-      await tx.subscription.create({
-        data: {
-          sellerId: s.id,
-          plan: "TRIAL",
-          status: "ACTIVE",
-          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          amount: 0,
-        },
-      });
-
       return s;
     });
 
@@ -177,7 +166,6 @@ export async function GET(req: NextRequest) {
       db.seller.findMany({
         where: { status: "APPROVED" },
         include: {
-          subscription: { select: { plan: true } },
           _count: { select: { products: true } },
         },
         take: limit,

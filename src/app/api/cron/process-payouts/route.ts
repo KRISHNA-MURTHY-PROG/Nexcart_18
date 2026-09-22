@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 /**
  * Constant-time secret comparison — matches the pattern already used for
  * Razorpay webhook/payment signature checks (see api/webhooks/razorpay,
- * api/payments/verify). A plain `!==` string compare leaks how many leading
+ * api/payments). A plain `!==` string compare leaks how many leading
  * characters matched via response timing, letting an attacker recover the
  * secret byte-by-byte over many requests. Buffer lengths are checked first
  * (timingSafeEqual throws, rather than returning false, on a length

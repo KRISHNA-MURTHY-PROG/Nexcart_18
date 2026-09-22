@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useAuthContext } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/utils";
 import {
-  TrendingUp, Package, ShoppingBag, Star, Lock, Loader2, Home,
+  TrendingUp, Package, ShoppingBag, Star, Loader2, Home,
   BarChart2, Award, ArrowUpRight, Percent, DollarSign,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +15,6 @@ interface WeeklyRevenue { weekStart: string; revenue: number }
 interface TopProduct    { productId: string; name: string; image: string | null; revenue: number; orders: number }
 
 interface AnalyticsData {
-  plan: string;
   revenue: number;
   orders: number;
   products: number;
@@ -88,16 +87,13 @@ export default function AnalyticsPage() {
   const { user } = useAuthContext();
   const [data, setData]       = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [locked, setLocked]   = useState(false);
-  const [plan, setPlan]       = useState("FREE");
   const [chartView, setChartView] = useState<ChartView>("daily");
 
   useEffect(() => {
     if (!user) return;
     fetch("/api/sellers/analytics", { headers: { Authorization: `Bearer ${user.uid}` } })
       .then((r) => r.json())
-      .then((d) => { if (d.error && d.plan) { setLocked(true); setPlan(d.plan); } else setData(d); })
-      .catch(() => setLocked(true))
+      .then((d) => setData(d))
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -112,23 +108,6 @@ export default function AnalyticsPage() {
 
   if (loading)
     return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-
-  if (locked)
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border py-20 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-          <Lock className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <h3 className="font-semibold">Analytics requires PRO or Premium</h3>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Upgrade your plan to unlock revenue charts, top products, and conversion rates.
-          You are currently on the <strong>{plan}</strong> plan.
-        </p>
-        <Link href="/dashboard/subscription" className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-80 transition-opacity">
-          Upgrade Plan
-        </Link>
-      </div>
-    );
 
   const stats = [
     { label: "Total Revenue",    value: formatPrice(data?.revenue ?? 0),           icon: TrendingUp, color: "text-green-600 dark:text-green-400",  bg: "bg-green-50 dark:bg-green-950/30" },
@@ -158,7 +137,7 @@ export default function AnalyticsPage() {
             <span className="text-[12px] text-foreground font-medium">Analytics</span>
           </div>
           <h1 className="text-xl font-semibold">Analytics</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{data?.plan} plan · Store performance overview</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">Store performance overview</p>
         </div>
         <Link href="/"><button className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2.5 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-sm"><Home className="h-4 w-4" /><span className="hidden sm:inline">Home</span></button></Link>
       </div>

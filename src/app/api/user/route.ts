@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
     include: {
       seller: {
         include: {
-          subscription: true,
           bankAccount: { select: { id: true } },
           _count: { select: { products: true, orderItems: true, transactions: true } },
         },

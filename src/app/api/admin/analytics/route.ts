@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 // routes (admin/sellers, admin/returns, admin/payouts) — this route needs
 // its own copy because it previously had NONE at all: it only checked for a
 // logged-in user, not an admin, so any signed-in customer or seller could
-// GET full platform revenue/order/subscription data. The client-side layout
+// GET full platform revenue/order data. The client-side layout
 // role check is not a security boundary — it runs after this handler's
 // response has already been sent.
 async function requireAdmin(req: NextRequest) {
@@ -31,7 +31,6 @@ export async function GET(req: NextRequest) {
     totalOrders,
     completedOrders,
     totalRevenue,
-    subscriptions,
   ] = await Promise.all([
     db.user.count(),
     db.seller.count(),
@@ -42,7 +41,6 @@ export async function GET(req: NextRequest) {
     db.order.count(),
     db.order.count({ where: { status: "DELIVERED" } }),
     db.payment.aggregate({ where: { status: "SUCCESS" }, _sum: { amount: true } }),
-    db.subscription.groupBy({ by: ["plan"], _count: true }),
   ]);
 
   // Monthly revenue last 6 months
@@ -68,9 +66,5 @@ export async function GET(req: NextRequest) {
     products: { total: totalProducts, active: activeProducts },
     orders: { total: totalOrders, completed: completedOrders },
     revenue: { total: totalRevenue._sum.amount || 0, byMonth: revenueByMonth },
-    subscriptions: subscriptions.reduce((acc, s) => {
-      acc[s.plan] = s._count;
-      return acc;
-    }, {} as Record<string, number>),
   });
 }

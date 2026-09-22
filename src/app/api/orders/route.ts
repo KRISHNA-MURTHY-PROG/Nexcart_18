@@ -7,6 +7,7 @@ import { sendOrderConfirmationEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { maybePromptBankDetails } from "@/lib/seller-onboarding";
 import { computeEffectivePrice, computeFreeUnits, offersForProduct } from "@/lib/offer-pricing";
+import { computeCommission } from "@/lib/commission";
 
 const COD_MAX_ORDER_VALUE = 2000; // COD only allowed for orders ≤ ₹2,000
 
@@ -64,7 +65,10 @@ export async function POST(req: NextRequest) {
   const productIds = items.map((i) => i.productId);
   const products = await db.product.findMany({
     where: { productId: { in: productIds }, isActive: true },
-    include: { seller: { select: { id: true, sellerId: true, storeName: true, status: true, isLocalStore: true } } },
+    include: {
+      seller: { select: { id: true, sellerId: true, storeName: true, status: true, isLocalStore: true, createdAt: true } },
+      category: { select: { slug: true } },
+    },
   });
 
   if (products.length !== items.length) {
@@ -259,20 +263,33 @@ export async function POST(req: NextRequest) {
     // Credit each seller's wallet for ONLINE orders only — fire-and-forget
     // COD orders: wallet credited when delivery is confirmed (cash in hand)
     if (!isCOD) {
+      // Commission is category-based (see lib/commission.ts) — sellers are
+      // credited lineTotal minus NexCart's cut, not the full amount the
+      // customer paid. Customer-facing pricing (OrderItem.price / totalAmount
+      // above) is untouched; only the internal wallet credit is reduced.
       const sellerAmounts = new Map<string, number>();
+      const sellerCommission = new Map<string, number>();
       items.forEach((item, idx) => {
         const product = products.find((p) => p.productId === item.productId)!;
-        const existing = sellerAmounts.get(product.seller.id) ?? 0;
-        sellerAmounts.set(product.seller.id, existing + itemPricing[idx].lineTotal);
+        const { netAmount, commission } = computeCommission(
+          itemPricing[idx].lineTotal,
+          product.category?.slug,
+          product.seller.createdAt
+        );
+        const existingNet = sellerAmounts.get(product.seller.id) ?? 0;
+        sellerAmounts.set(product.seller.id, Math.round((existingNet + netAmount) * 100) / 100);
+        const existingCommission = sellerCommission.get(product.seller.id) ?? 0;
+        sellerCommission.set(product.seller.id, Math.round((existingCommission + commission) * 100) / 100);
       });
       for (const [sellerId, amount] of sellerAmounts) {
+        const commission = sellerCommission.get(sellerId) ?? 0;
         db.seller.update({ where: { id: sellerId }, data: { walletBalance: { increment: amount } } })
           .then(() => db.sellerTransaction.create({
             data: {
               sellerId,
               type: "ORDER_CREDIT",
               amount,
-              description: `Order #${order.orderId.slice(-8).toUpperCase()} placed`,
+              description: `Order #${order.orderId.slice(-8).toUpperCase()} placed${commission > 0 ? ` (₹${commission.toFixed(2)} platform commission deducted)` : ""}`,
               orderId: order.id,
             },
           }))

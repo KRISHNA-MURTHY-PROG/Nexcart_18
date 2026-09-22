@@ -85,7 +85,6 @@ export const getSeller = unstable_cache(
     const seller = await db.seller.findUnique({
       where: { sellerId, status: "APPROVED" },
       include: {
-        subscription: true,
         products: {
           where: { isActive: true },
           include: {

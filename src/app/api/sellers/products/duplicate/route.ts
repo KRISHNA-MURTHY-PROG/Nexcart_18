@@ -2,13 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getVerifiedUid } from "@/lib/auth";
 
-const PLAN_LIMITS: Record<string, number> = {
-  FREE: Infinity,
-  PRO: Infinity,
-  PREMIUM: Infinity,
-  TRIAL: Infinity,
-};
-
 export async function POST(req: NextRequest) {
   try {
     const firebaseUid = await getVerifiedUid(req);
@@ -16,13 +9,11 @@ export async function POST(req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { firebaseUid },
-      include: { seller: { include: { subscription: true } } },
+      include: { seller: true },
     });
     if (!user?.seller) return NextResponse.json({ error: "Not a seller" }, { status: 403 });
 
     const seller = user.seller;
-    const plan = seller.subscription?.plan ?? "FREE";
-    const limit = PLAN_LIMITS[plan] ?? Infinity;
 
     let body: { productId?: string };
     try {
@@ -40,15 +31,6 @@ export async function POST(req: NextRequest) {
       include: { variants: true },
     });
     if (!source) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-
-    // Check plan limit
-    const existingCount = await db.product.count({ where: { sellerId: seller.id } });
-    if (existingCount >= limit) {
-      return NextResponse.json(
-        { error: `Plan limit reached. Your ${plan} plan allows ${limit} products.` },
-        { status: 403 }
-      );
-    }
 
     // Generate new unique productId
     const newProductId = `PROD-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;

@@ -68,7 +68,7 @@ export default async function AdminPaymentsPage() {
                 <td className="px-4 py-3 text-sm font-medium">{formatPrice(p.amount)}</td>
                 <td className="px-4 py-3 hidden sm:table-cell">
                   <Badge variant="secondary" className="text-[10px]">
-                    {p.orderId ? "Order" : p.subscriptionId ? "Subscription" : "Other"}
+                    {p.orderId ? "Order" : "Other"}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">

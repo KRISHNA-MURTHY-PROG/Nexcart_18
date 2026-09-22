@@ -180,8 +180,8 @@ export function BankAccountForm() {
           Bank Account for Payouts
         </CardTitle>
         <CardDescription>
-          Your earnings will be transferred to this account. Since NexCart uses a flat
-          subscription model, 100% of order value is paid out to you.
+          Your earnings will be transferred to this account, after NexCart&apos;s
+          category-based commission is deducted from each order.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

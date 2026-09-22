@@ -89,7 +89,6 @@ interface SellerStoreClientProps {
     rating: number;
     totalSales: number;
     createdAt: Date;
-    subscription?: { plan: string } | null;
     products: Array<{
       id: string;
       productId: string;
@@ -743,6 +742,17 @@ export function SellerStoreClient({ seller, categories, collections = [], badges
     const id = setInterval(() => setHlIdx(i => (i + 1) % highlights.length), 3500);
     return () => clearInterval(id);
   }, [highlights.length, hlPaused]);
+  // Each uploaded highlight photo has its own real width:height shape, and
+  // no single fixed box shape matches every photo at every screen width —
+  // that's what was forcing a choice between cropping a photo (object-cover)
+  // or leaving empty bars beside it (object-contain) on some screens. This
+  // records each photo's TRUE ratio as it finishes loading (from the actual
+  // decoded file, not a guess), so the box itself can be shaped to match
+  // the currently-shown photo exactly — full photo, no crop, no bars, on
+  // every screen size. Falls back to the site's original 2.63:1 shape for
+  // any slide not measured yet (e.g. still loading).
+  const [hlAspects, setHlAspects] = useState<Record<number, number>>({});
+  const hlAspect = hlAspects[hlIdx] ?? 2.63;
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1093,9 +1103,6 @@ export function SellerStoreClient({ seller, categories, collections = [], badges
     ? `https://wa.me/${sellerPhone}?text=${encodeURIComponent(`Hi! I found your store "${seller.storeName}" on NexCart and have a query.`)}`
     : null;
 
-  const plan = seller.subscription?.plan;
-  const isPremium = plan === "PREMIUM";
-  const isPro = plan === "PRO";
   // Use seller's custom colour if set (flat hex, or a "#hex,#hex" gradient
   // picked in Settings), else fall back to a hash-based colour. `bannerColor2`
   // is the second gradient stop used everywhere the page renders a two-tone
@@ -2524,19 +2531,9 @@ export function SellerStoreClient({ seller, categories, collections = [], badges
                   </span>
                 </div>
 
-                {/* ID + plan badges */}
+                {/* Seller ID */}
                 <div className="flex items-center gap-1.5 flex-wrap mb-2">
                   <span className="font-mono text-[10px] bg-white/15 border border-white/20 px-1.5 py-0.5 rounded-md text-white/70">@{seller.sellerId}</span>
-                  {isPremium && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-black" style={{ background: 'linear-gradient(135deg,#fbbf24 0%,#d97706 100%)', color: '#1c0a00', boxShadow: '0 2px 6px rgba(245,158,11,0.5)' }}>
-                      ⭐ PREMIUM
-                    </span>
-                  )}
-                  {isPro && (
-                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[8px] font-black" style={{ background: 'linear-gradient(135deg,#3b82f6 0%,#2563eb 100%)', color: 'white', boxShadow: '0 2px 6px rgba(59,130,246,0.5)' }}>
-                      PRO
-                    </span>
-                  )}
                 </div>
 
                 {/* Stats chips — frosted glass based on banner colour, with count-up reveal */}
@@ -2762,16 +2759,6 @@ export function SellerStoreClient({ seller, categories, collections = [], badges
                   >
                     ✓ VERIFIED SELLER
                   </span>
-                  {isPremium && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-black" style={{ background: 'linear-gradient(135deg,#fbbf24 0%,#d97706 100%)', color: '#1c0a00', boxShadow: '0 4px 16px rgba(245,158,11,0.6)' }}>
-                      ⭐ PREMIUM
-                    </span>
-                  )}
-                  {isPro && (
-                    <span className="inline-flex items-center rounded-full px-4 py-1.5 text-sm font-black" style={{ background: 'linear-gradient(135deg,#3b82f6 0%,#2563eb 100%)', color: 'white', boxShadow: '0 4px 16px rgba(59,130,246,0.6)' }}>
-                      PRO
-                    </span>
-                  )}
                   {activeFestival && (
                     <span className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-bold text-white" style={{ background: activeFestival.overlay.replace("0.18","0.5"), border: `1.5px solid ${activeFestival.accent}80` }}>
                       {activeFestival.emoji} {activeFestival.name} Special
@@ -3434,23 +3421,23 @@ export function SellerStoreClient({ seller, categories, collections = [], badges
       </div>
 
       {/* ── HIGHLIGHTS CAROUSEL ──
-          The box's own height only tracks its own width up to a 1368px-wide
-          viewport (38vw and 100vw grow in the same fixed 2.63:1 ratio up to
-          there); past that the "38vw" height hit its 520px ceiling while the
-          box kept getting wider with the screen, so on ordinary desktop
-          widths (1440/1536/1920px) the box ended up far wider than tall —
-          object-cover then had to zoom the photo in hard to fill that shape,
-          cropping the top and bottom (that's the cut-off caption a seller
-          reported on desktop; phones stay under ~1368px so they never hit
-          this). Switching to object-contain from the sm breakpoint up always
-          shows the complete photo — some letterboxing either side on very
-          wide screens instead of a crop, backed by a neutral fill so it
-          reads as an intentional frame rather than empty space. Mobile keeps
-          object-cover exactly as it already looked. */}
+          Every earlier attempt used a box shape guessed from viewport width
+          (a fixed vw-based height, then a fixed pixel ceiling), and NONE of
+          those numbers actually match a given photo's real shape — a photo
+          has ONE fixed width:height ratio; a box shape derived from the
+          screen's width does not, so it was always going to either crop the
+          photo to fill a mismatched box (object-cover) or leave empty bars
+          beside a correctly-shown photo (object-contain), depending on the
+          screen. The actual fix is to stop guessing the box's shape and
+          instead measure the photo's real shape once it loads (hlAspect,
+          from its true decoded pixel dimensions — see hlAspects state
+          above) and size the box to exactly that ratio. Box shape == photo
+          shape means object-cover now fills it with zero cropping, on every
+          screen size, matching how it always looked correct on mobile. */}
       {highlights.length > 0 && (
         <div
           className="relative overflow-hidden select-none w-full bg-muted"
-          style={{ height: "clamp(220px, 38vw, 520px)" }}
+          style={{ aspectRatio: hlAspect, minHeight: 180, maxHeight: 730 }}
           onMouseEnter={() => setHlPaused(true)}
           onMouseLeave={() => setHlPaused(false)}
           onTouchStart={e => { hlTouchStartX.current = e.touches[0].clientX; }}
@@ -3481,11 +3468,18 @@ export function SellerStoreClient({ seller, categories, collections = [], badges
                   src={url}
                   alt={`${seller.storeName} highlight ${i + 1}`}
                   fill
-                  className="object-cover sm:object-contain object-center"
+                  className="object-cover object-center"
                   sizes="100vw"
                   quality={100}
                   style={i === hlIdx ? { animation: "nxc-hl-ken 4s ease-out forwards" } : {}}
                   priority={i <= 1}
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    if (!img.naturalWidth || !img.naturalHeight) return;
+                    setHlAspects((prev) =>
+                      prev[i] !== undefined ? prev : { ...prev, [i]: img.naturalWidth / img.naturalHeight }
+                    );
+                  }}
                 />
                 <div className="absolute inset-x-0 bottom-0 h-12 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.35))" }} />
               </div>

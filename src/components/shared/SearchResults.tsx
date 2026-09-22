@@ -61,7 +61,6 @@ export async function SearchResults({ searchParams, view = "grid" }: SearchResul
       db.seller.findMany({
         where,
         include: {
-          subscription: { select: { plan: true } },
           _count: { select: { products: true } },
         },
         take: limit,
@@ -99,7 +98,6 @@ export async function SearchResults({ searchParams, view = "grid" }: SearchResul
                   banner={s.banner}
                   rating={s.rating}
                   productCount={s._count.products}
-                  plan={s.subscription?.plan}
                 />
               ))}
             </div>

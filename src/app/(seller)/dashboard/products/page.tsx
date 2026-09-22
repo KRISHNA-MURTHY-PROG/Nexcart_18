@@ -49,17 +49,9 @@ function getUid() { try { return localStorage.getItem(UID_KEY); } catch { return
 function getProdCache() { try { const r = localStorage.getItem(PROD_KEY); if (!r) return null; const d = JSON.parse(r); return d?.ts && Date.now() - d.ts < FRESH_MS ? d : null; } catch { return null; } }
 function saveProd(payload: object) { try { localStorage.setItem(PROD_KEY, JSON.stringify({ data: payload, ts: Date.now() })); } catch {} }
 
-const PLAN_LIMITS: Record<string, number> = {
-  FREE: Infinity,
-  PRO: Infinity,
-  PREMIUM: Infinity,
-  TRIAL: Infinity,
-};
-
 export default function SellerProductsPage() {
   const { user } = useAuthContext();
   const [products, setProducts] = useState<Product[]>(() => { try { return getProdCache()?.data?.products ?? []; } catch { return []; } });
-  const [plan, setPlan] = useState<string>(() => { try { return getProdCache()?.data?.plan ?? "FREE"; } catch { return "FREE"; } });
   const [loading, setLoading] = useState(() => { try { return !getProdCache()?.data; } catch { return true; } });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -86,8 +78,7 @@ export default function SellerProductsPage() {
       .then((r) => r.json())
       .then((data) => {
         setProducts(data.products ?? []);
-        setPlan(data.plan ?? "FREE");
-        saveProd({ products: data.products ?? [], plan: data.plan ?? "FREE" });
+        saveProd({ products: data.products ?? [] });
       })
       .catch(() => toast.error("Failed to load products"))
       .finally(() => setLoading(false));
@@ -118,7 +109,7 @@ export default function SellerProductsPage() {
       toast.success("Product permanently deleted");
       setProducts((prev) => {
         const next = prev.filter((p) => p.id !== productId);
-        saveProd({ products: next, plan });
+        saveProd({ products: next });
         return next;
       });
       setSelected((prev) => { const s = new Set(prev); s.delete(productId); return s; });
@@ -199,7 +190,7 @@ export default function SellerProductsPage() {
       if (!res.ok) throw new Error();
       setProducts((prev) => {
         const next = prev.map((p) => p.id === product.id ? { ...p, isActive: !p.isActive } : p);
-        saveProd({ products: next, plan });
+        saveProd({ products: next });
         return next;
       });
       toast.success(product.isActive ? "Product hidden" : "Product activated");
@@ -224,7 +215,7 @@ export default function SellerProductsPage() {
   const handleBulkActivate = () => {
     setProducts((prev) => {
       const next = prev.map((p) => selected.has(p.id) ? { ...p, isActive: true } : p);
-      saveProd({ products: next, plan });
+      saveProd({ products: next });
       return next;
     });
     toast.success(`${selected.size} products activated`);
@@ -234,7 +225,7 @@ export default function SellerProductsPage() {
   const handleBulkDeactivate = () => {
     setProducts((prev) => {
       const next = prev.map((p) => selected.has(p.id) ? { ...p, isActive: false } : p);
-      saveProd({ products: next, plan });
+      saveProd({ products: next });
       return next;
     });
     toast.success(`${selected.size} products hidden`);
@@ -294,9 +285,6 @@ export default function SellerProductsPage() {
     );
   }
 
-  const limit = PLAN_LIMITS[plan] ?? Infinity;
-  const atLimit = false;
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -312,7 +300,7 @@ export default function SellerProductsPage() {
           </div>
           <h1 className="text-xl font-semibold tracking-tight">Products</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {products.length} / {limit === Infinity ? "∞" : limit} products ({plan} plan)
+            {products.length} products
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -334,7 +322,7 @@ export default function SellerProductsPage() {
             size="sm"
             className="gap-1.5"
             onClick={() => setCsvActiveModal(true)}
-            disabled={csvImporting || atLimit}
+            disabled={csvImporting}
             title="Import products from CSV (columns: name, price, stock, category, description)"
           >
             {csvImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
@@ -346,20 +334,12 @@ export default function SellerProductsPage() {
             </span>
           )}
           <Link href="/dashboard/products/new">
-            <Button className="gap-2" disabled={atLimit}>
+            <Button className="gap-2">
               <Plus className="h-4 w-4" /> Add Product
             </Button>
           </Link>
         </div>
       </div>
-
-      {/* Plan limit warning */}
-      {atLimit && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-400">
-          You&apos;ve reached your {plan} plan limit.{" "}
-          <Link href="/dashboard/subscription" className="font-semibold underline">Upgrade</Link> for more products.
-        </div>
-      )}
 
       {/* Search + filter tabs row */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

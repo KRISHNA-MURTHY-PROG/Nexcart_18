@@ -9,7 +9,6 @@
  * This replaces the previous insecure pattern of trusting raw UIDs.
  */
 import { NextRequest } from "next/server";
-import { db } from "@/lib/db";
 
 /**
  * Decode the payload of a JWT without verifying the signature.
@@ -127,22 +126,4 @@ export async function getVerifiedUid(
 
   const decoded = await verifyFirebaseToken(token, options?.checkRevoked ?? false);
   return decoded?.uid ?? null;
-}
-
-/**
- * Get the full DB user from a verified request.
- * Returns null if unauthenticated or user not found.
- */
-export async function getAuthUser(req: NextRequest, options?: { checkRevoked?: boolean }) {
-  const uid = await getVerifiedUid(req, options);
-  if (!uid) return null;
-
-  return db.user.findUnique({
-    where: { firebaseUid: uid },
-    include: {
-      seller: {
-        include: { subscription: true },
-      },
-    },
-  });
 }

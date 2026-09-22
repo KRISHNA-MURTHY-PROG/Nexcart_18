@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         user: { select: { email: true, name: true, firebaseUid: true } },
-        subscription: { select: { plan: true, status: true, endDate: true } },
         _count: { select: { products: true, orderItems: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -76,27 +75,6 @@ export async function PATCH(req: NextRequest) {
     await db.user.update({
       where: { id: seller.user.id },
       data: { role: status === "APPROVED" ? "SELLER" : "CUSTOMER" },
-    });
-  }
-
-  // On approval: create a 1-month free TRIAL subscription
-  if (status === "APPROVED") {
-    const trialEnd = new Date();
-    trialEnd.setMonth(trialEnd.getMonth() + 1);
-
-    // upsert with an empty `update` is equivalent to the previous
-    // "create only if missing" check, in a single round-trip instead of two.
-    await db.subscription.upsert({
-      where: { sellerId: seller.id },
-      create: {
-        sellerId:  seller.id,
-        plan:      "TRIAL",
-        status:    "ACTIVE",
-        startDate: new Date(),
-        endDate:   trialEnd,
-        amount:    0,
-      },
-      update: {},
     });
   }
 

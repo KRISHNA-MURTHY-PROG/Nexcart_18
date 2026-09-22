@@ -1,12 +1,4 @@
-import type { User, Seller, Product, Order, Subscription, Category } from "@prisma/client";
-
-export type UserWithSeller = User & {
-  seller: SellerWithSubscription | null;
-};
-
-export type SellerWithSubscription = Seller & {
-  subscription: Subscription | null;
-};
+import type { Seller, Product, Order, Category } from "@prisma/client";
 
 export type ProductWithSeller = Product & {
   seller: Pick<Seller, "sellerId" | "storeName">;
@@ -31,8 +23,6 @@ export interface RazorpayResponse {
   razorpay_payment_id: string;
   razorpay_signature: string;
 }
-
-export type SubscriptionPlanKey = "TRIAL" | "MONTHLY" | "HALF_YEARLY" | "YEARLY";
 
 export interface CartItemLocal {
   productId: string;

@@ -101,10 +101,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Load seller + subscription
+    // 2. Load seller
     const user = await db.user.findUnique({
       where: { firebaseUid: userId },
-      include: { seller: { include: { subscription: true } } },
+      include: { seller: true },
     });
     if (!user?.seller) {
       return NextResponse.json({ error: "Not a seller" }, { status: 403 });
@@ -116,18 +116,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Subscription check
-    const sub = user.seller.subscription;
-    const isSubActive =
-      sub && sub.status === "ACTIVE" && new Date(sub.endDate) > new Date();
-    if (!isSubActive) {
-      return NextResponse.json(
-        { error: "Your subscription has expired. Please renew to add products." },
-        { status: 403 }
-      );
-    }
-
-    // 4. Parse request body
+    // 3. Parse request body
     let body: Record<string, unknown>;
     try {
       body = await req.json();
@@ -135,7 +124,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
 
-    // 5. Destructure extra fields not in the Zod schema
+    // 4. Destructure extra fields not in the Zod schema
     const {
       categorySlug,
       productTypeId,
@@ -153,7 +142,7 @@ export async function POST(req: NextRequest) {
       ...rest
     } = body;
 
-    // 6. Default condition to ORIGINAL if not supplied
+    // 5. Default condition to ORIGINAL if not supplied
     if (!rest.condition) rest.condition = "ORIGINAL";
 
     // 6b. Resolve the storefront card design.
@@ -164,7 +153,7 @@ export async function POST(req: NextRequest) {
     const resolvedCardDesign = normalizeDesignForStorage(cardDesign);
     const resolvedCardFont = normalizeFontForStorage(cardFont);
 
-    // 7. Validate core product fields
+    // 6. Validate core product fields
     const parsed = productSchema.safeParse(rest);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -173,14 +162,14 @@ export async function POST(req: NextRequest) {
     parsed.data.name = stripHtml(parsed.data.name);
     parsed.data.description = stripHtml(parsed.data.description);
 
-    // 8. Resolve category
+    // 7. Resolve category
     let categoryId: string | undefined;
     if (categorySlug && typeof categorySlug === "string") {
       const cat = await db.category.findUnique({ where: { slug: categorySlug } });
       if (cat) categoryId = cat.id;
     }
 
-    // 9. Build merged specifications
+    // 8. Build merged specifications
     const mergedSpecifications = {
       ...(specifications && typeof specifications === "object"
         ? (specifications as Record<string, unknown>)
@@ -199,7 +188,7 @@ export async function POST(req: NextRequest) {
         : {}),
     };
 
-    // 10. Create product with collision-proof productId (retry up to 5 times)
+    // 9. Create product with collision-proof productId (retry up to 5 times)
     type CreatedProduct = { id: string; name: string; productId: string; images: string[]; [key: string]: unknown };
     let product: CreatedProduct | null = null;
     let lastError: unknown = null;

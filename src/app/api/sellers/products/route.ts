@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { firebaseUid },
-      include: { seller: { include: { subscription: true } } },
+      include: { seller: true },
     });
     if (!user?.seller) return NextResponse.json({ error: "Not a seller" }, { status: 403 });
 
@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         products,
-        plan: user.seller.subscription?.plan ?? "FREE",
         sellerId: user.seller.id,
       },
       { headers: { "Cache-Control": "private, max-age=0, stale-while-revalidate=30" } }

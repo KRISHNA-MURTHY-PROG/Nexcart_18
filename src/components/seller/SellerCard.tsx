@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Package } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface SellerCardProps {
@@ -12,7 +11,6 @@ interface SellerCardProps {
   banner?: string | null;
   rating: number;
   productCount: number;
-  plan?: string | null;
   className?: string;
 }
 
@@ -24,7 +22,6 @@ export function SellerCard({
   banner,
   rating,
   productCount,
-  plan,
   className,
 }: SellerCardProps) {
   return (
@@ -55,19 +52,9 @@ export function SellerCard({
         </div>
 
         <div className="px-4 pb-4 pt-7">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="font-semibold text-sm">{storeName}</h3>
-              <p className="text-xs text-muted-foreground">{sellerId}</p>
-            </div>
-            {plan && plan !== "FREE" && (
-              <Badge
-                variant={plan === "PREMIUM" ? "default" : "secondary"}
-                className="text-[10px]"
-              >
-                {plan}
-              </Badge>
-            )}
+          <div>
+            <h3 className="font-semibold text-sm">{storeName}</h3>
+            <p className="text-xs text-muted-foreground">{sellerId}</p>
           </div>
           {description && (
             <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">

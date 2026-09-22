@@ -12,8 +12,7 @@ const razorpay = new Razorpay({
 });
 
 const createSchema = z.object({
-  orderId: z.string().optional(),
-  subscriptionId: z.string().optional(),
+  orderId: z.string(),
   amount: z.number().positive().max(1000000),
 });
 
@@ -43,35 +42,28 @@ export async function POST(req: NextRequest) {
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const { orderId, subscriptionId, amount } = parsed.data;
+  const { orderId, amount } = parsed.data;
 
-  if (!orderId && !subscriptionId) {
-    return NextResponse.json({ error: "orderId or subscriptionId is required" }, { status: 400 });
+  const order = await db.order.findUnique({ where: { id: orderId }, select: { id: true, userId: true, totalAmount: true } });
+  if (!order || order.userId !== user.id) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
-
-  if (orderId) {
-    const order = await db.order.findUnique({ where: { id: orderId }, select: { id: true, userId: true, totalAmount: true } });
-    if (!order || order.userId !== user.id) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
-    }
-    if (Math.abs(amount - order.totalAmount) >= 0.01) {
-      return NextResponse.json({ error: "Amount does not match order total" }, { status: 400 });
-    }
+  if (Math.abs(amount - order.totalAmount) >= 0.01) {
+    return NextResponse.json({ error: "Amount does not match order total" }, { status: 400 });
   }
 
   try {
     const razorpayOrder = await razorpay.orders.create({
       amount: Math.round(amount * 100), // paise
       currency: "INR",
-      receipt: (orderId || subscriptionId || `rcpt_${Date.now()}`).slice(0, 40),
-      notes: { orderId: orderId ?? "", subscriptionId: subscriptionId ?? "", userId: user.id },
+      receipt: orderId.slice(0, 40),
+      notes: { orderId, userId: user.id },
     });
 
     const payment = await db.payment.create({
       data: {
         userId: user.id,
-        orderId: orderId ?? null,
-        subscriptionId: subscriptionId ?? null,
+        orderId,
         razorpayOrderId: razorpayOrder.id,
         amount,
         status: "PENDING",
@@ -137,17 +129,12 @@ export async function PUT(req: NextRequest) {
     const updated = await db.payment.update({
       where: { id: paymentId },
       data: { razorpayPaymentId, razorpaySignature, status: "SUCCESS" },
-      include: { order: true, subscription: true },
+      include: { order: true },
     });
 
     // Activate order
     if (updated.orderId) {
       await db.order.update({ where: { id: updated.orderId }, data: { status: "CONFIRMED" } });
-    }
-
-    // Activate subscription
-    if (updated.subscriptionId) {
-      await db.subscription.update({ where: { id: updated.subscriptionId }, data: { status: "ACTIVE" } });
     }
 
     return NextResponse.json({ success: true, payment: updated });

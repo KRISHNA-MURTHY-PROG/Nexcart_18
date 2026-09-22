@@ -5,13 +5,6 @@ import { sendLowStockAlertEmail } from "@/lib/email";
 import { stripHtml } from "@/lib/sanitize";
 import { rateLimit, RATE_LIMITS } from "@/lib/ratelimit";
 
-const PLAN_LIMITS: Record<string, number> = {
-  FREE: Infinity,
-  PRO: Infinity,
-  PREMIUM: Infinity,
-  TRIAL: Infinity,
-};
-
 interface CSVRow {
   name: string;
   description: string;
@@ -86,7 +79,7 @@ export async function POST(req: NextRequest) {
   try {
     // 5 bulk imports per hour per IP — each request can create up to 500
     // products in one call, so this needed its own (coarser) limit rather
-    // than relying only on auth/subscription checks.
+    // than relying only on auth checks.
     const limited = await rateLimit(req, RATE_LIMITS.csvImport);
     if (limited) return limited;
 
@@ -95,13 +88,11 @@ export async function POST(req: NextRequest) {
 
     const user = await db.user.findUnique({
       where: { firebaseUid },
-      include: { seller: { include: { subscription: true } } },
+      include: { seller: true },
     });
     if (!user?.seller) return NextResponse.json({ error: "Not a seller" }, { status: 403 });
 
     const seller = user.seller;
-    const plan = seller.subscription?.plan ?? "FREE";
-    const limit = PLAN_LIMITS[plan] ?? Infinity;
 
     // Parse multipart form data
     const formData = await req.formData();
@@ -122,15 +113,6 @@ export async function POST(req: NextRequest) {
 
     if (rows.length === 0) return NextResponse.json({ error: "CSV has no data rows" }, { status: 400 });
     if (rows.length > 500) return NextResponse.json({ error: "CSV exceeds 500 rows per import" }, { status: 400 });
-
-    // Check plan product limit
-    const existingCount = await db.product.count({ where: { sellerId: seller.id } });
-    if (existingCount + rows.length > limit) {
-      return NextResponse.json(
-        { error: `Plan limit reached. Your ${plan} plan allows ${limit} products. You have ${existingCount} and are trying to add ${rows.length}.` },
-        { status: 403 }
-      );
-    }
 
     // Pre-fetch all categories for lookup
     const allCategories = await db.category.findMany({ select: { id: true, name: true, slug: true } });

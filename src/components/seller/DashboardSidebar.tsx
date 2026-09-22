@@ -9,8 +9,6 @@ import {
   Settings,
   BarChart2,
   ChevronRight,
-  CreditCard,
-  Crown,
   Store,
   Clock,
   Tag,
@@ -37,11 +35,6 @@ interface DashboardSidebarProps {
     status: string;
     storeHandle?: string | null;
   };
-  subscription: {
-    plan: string;
-    status: string;
-    endDate: Date | string;
-  } | null;
 }
 
 interface NavItem {
@@ -73,14 +66,12 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/gallery", label: "Gallery", icon: GalleryHorizontal },
   { href: "/dashboard/qr-code", label: "QR Code", icon: QrCode },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart2 },
-  { href: "/dashboard/subscription", label: "Subscription", icon: CreditCard },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export function DashboardSidebar({ seller, subscription }: DashboardSidebarProps) {
+export function DashboardSidebar({ seller }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router   = useRouter();
-  const isPremium = subscription?.plan === "PREMIUM";
   const initials = seller.storeName?.slice(0, 2).toUpperCase() || "ST";
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -171,37 +162,6 @@ export function DashboardSidebar({ seller, subscription }: DashboardSidebarProps
         })}
       </nav>
 
-      {/* Upgrade card */}
-      <div className="p-3">
-        {isPremium ? (
-          <Link href="/dashboard/subscription" onClick={() => setDrawerOpen(false)}>
-            <div className="flex items-center gap-2.5 rounded-xl border border-border/50 px-3 py-2.5 transition-colors hover:bg-muted">
-              <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] lg:text-[14px] font-semibold">Premium Plan</div>
-                <div className="text-[10px] lg:text-[12px] text-muted-foreground">Active</div>
-              </div>
-            </div>
-          </Link>
-        ) : (
-          <div className="rounded-xl bg-foreground p-4 text-background">
-            <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400">
-              <Crown className="h-4 w-4 text-foreground" />
-            </div>
-            <div className="text-[12px] lg:text-[14px] font-semibold leading-snug mb-1">Grow your business</div>
-            <div className="text-[11px] lg:text-[13px] text-background/60 leading-relaxed mb-3">
-              Unlock premium features and grow your store faster.
-            </div>
-            <Link
-              href="/dashboard/subscription"
-              onClick={() => setDrawerOpen(false)}
-              className="block w-full rounded-lg bg-background py-2 text-center text-[12px] lg:text-[14px] font-semibold text-foreground transition-opacity hover:opacity-90"
-            >
-              Upgrade plan
-            </Link>
-          </div>
-        )}
-      </div>
     </>
   );
 

@@ -8,20 +8,9 @@ export async function GET(req: NextRequest) {
 
   const user = await db.user.findUnique({
     where: { firebaseUid },
-    include: {
-      seller: {
-        include: { subscription: true },
-      },
-    },
+    include: { seller: true },
   });
   if (!user?.seller) return NextResponse.json({ error: "Not a seller" }, { status: 403 });
-
-  const plan = user.seller.subscription?.plan ?? "FREE";
-  const hasAnalytics = plan === "PRO" || plan === "PREMIUM";
-
-  if (!hasAnalytics) {
-    return NextResponse.json({ error: "Analytics requires PRO or PREMIUM plan", plan }, { status: 403 });
-  }
 
   const sellerId = user.seller.id;
 
@@ -162,7 +151,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     {
-      plan,
       // Summary stats
       revenue: lifetimeRevenue,
       orders: totalOrdersCount,

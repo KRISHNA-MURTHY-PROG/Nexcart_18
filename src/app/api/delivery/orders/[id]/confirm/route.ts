@@ -5,6 +5,7 @@ import { createNotification } from "@/lib/notifications";
 import { maybePromptBankDetails } from "@/lib/seller-onboarding";
 import { sendOrderDeliveredEmail } from "@/lib/email";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/ratelimit";
+import { computeCommission } from "@/lib/commission";
 
 export async function POST(
   req: NextRequest,
@@ -37,7 +38,12 @@ export async function POST(
     const order = await db.order.findUnique({
       where: { id: params.id },
       include: {
-        items: true,
+        items: {
+          include: {
+            product: { select: { category: { select: { slug: true } } } },
+            seller: { select: { createdAt: true } },
+          },
+        },
         user: { select: { id: true, name: true, email: true } },
       },
     });
@@ -76,12 +82,25 @@ export async function POST(
       );
     }
 
-    // Compute seller amounts from order items
+    // Compute seller amounts from order items, net of category-based
+    // platform commission (see lib/commission.ts) — same deduction applied
+    // to online orders in /api/orders/route.ts.
     const sellerAmounts = new Map<string, number>();
+    const sellerCommission = new Map<string, number>();
     for (const item of order.items) {
+      const lineTotal = item.price * item.quantity;
+      const { netAmount, commission } = computeCommission(
+        lineTotal,
+        item.product?.category?.slug,
+        item.seller?.createdAt
+      );
       sellerAmounts.set(
         item.sellerId,
-        (sellerAmounts.get(item.sellerId) ?? 0) + item.price * item.quantity
+        Math.round(((sellerAmounts.get(item.sellerId) ?? 0) + netAmount) * 100) / 100
+      );
+      sellerCommission.set(
+        item.sellerId,
+        Math.round(((sellerCommission.get(item.sellerId) ?? 0) + commission) * 100) / 100
       );
     }
 
@@ -99,6 +118,7 @@ export async function POST(
 
       if (order.isCOD) {
         for (const [sellerId, amount] of sellerAmounts) {
+          const commission = sellerCommission.get(sellerId) ?? 0;
           await tx.seller.update({
             where: { id: sellerId },
             data: { walletBalance: { increment: amount } },
@@ -108,7 +128,7 @@ export async function POST(
               sellerId,
               type: "ORDER_CREDIT",
               amount,
-              description: `COD collected for Order #${order.orderId.slice(-8).toUpperCase()}`,
+              description: `COD collected for Order #${order.orderId.slice(-8).toUpperCase()}${commission > 0 ? ` (₹${commission.toFixed(2)} platform commission deducted)` : ""}`,
               orderId: order.id,
             },
           });

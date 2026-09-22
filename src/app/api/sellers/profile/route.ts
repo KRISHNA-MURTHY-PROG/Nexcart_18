@@ -16,7 +16,6 @@ export async function GET(req: NextRequest) {
     include: {
       seller: {
         include: {
-          subscription: true,
           _count: { select: { products: true, orderItems: true } },
         },
       },
@@ -46,7 +45,6 @@ export async function GET(req: NextRequest) {
     storeName: user.seller.storeName,
     description: user.seller.description,
     logo: user.seller.logo,
-    subscription: user.seller.subscription,
     seller: {
       id: user.seller.id,
       sellerId: user.seller.sellerId,

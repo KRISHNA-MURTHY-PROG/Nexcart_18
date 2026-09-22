@@ -9,7 +9,7 @@ import { captureError } from "@/lib/logger";
  * Setup in Razorpay Dashboard:
  * Settings → Webhooks → Add new webhook
  * URL: https://yourapp.vercel.app/api/webhooks/razorpay
- * Events: payment.captured, payment.failed, subscription.activated, subscription.cancelled
+ * Events: payment.captured, payment.failed, refund.processed
  *
  * Add RAZORPAY_WEBHOOK_SECRET to your .env from the webhook settings page.
  */
@@ -108,26 +108,6 @@ export async function POST(req: NextRequest) {
         await db.payment.updateMany({
           where: { razorpayOrderId: payment.order_id, status: "PENDING" },
           data: { status: "FAILED" },
-        });
-        break;
-      }
-
-      case "subscription.activated": {
-        const sub = payload.subscription?.entity;
-        if (!sub?.id) break;
-        await db.subscription.updateMany({
-          where: { razorpaySubscriptionId: sub.id },
-          data: { status: "ACTIVE" },
-        });
-        break;
-      }
-
-      case "subscription.cancelled": {
-        const sub = payload.subscription?.entity;
-        if (!sub?.id) break;
-        await db.subscription.updateMany({
-          where: { razorpaySubscriptionId: sub.id },
-          data: { status: "CANCELLED" },
         });
         break;
       }

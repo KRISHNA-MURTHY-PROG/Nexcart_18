@@ -133,11 +133,3 @@ export function buildDidYouMeanQuery(query: string, dictionary: string[] = SEARC
 
   return changed ? corrected.join(" ") : null;
 }
-
-export const SUBSCRIPTION_LIMITS = {
-  TRIAL:       { price: 0,    maxProducts: 10,  maxImages: 3,  canCreateCoupons: false, hasAnalytics: false, hasPrioritySupport: false },
-  MONTHLY:     { price: 499,  maxProducts: 50,  maxImages: 5,  canCreateCoupons: true,  hasAnalytics: false, hasPrioritySupport: false },
-  HALF_YEARLY: { price: 2499, maxProducts: 75,  maxImages: 6,  canCreateCoupons: true,  hasAnalytics: false, hasPrioritySupport: false },
-  PRO:         { price: 999,  maxProducts: 100, maxImages: 8,  canCreateCoupons: true,  hasAnalytics: false, hasPrioritySupport: true  },
-  PREMIUM:     { price: 2499, maxProducts: 999, maxImages: 15, canCreateCoupons: true,  hasAnalytics: true,  hasPrioritySupport: true  },
-} as const

@@ -15,26 +15,6 @@ enum Role {
   DELIVERY_AGENT
 }
 
-enum SubscriptionPlan {
-  TRIAL
-  MONTHLY
-  HALF_YEARLY
-  YEARLY
-}
-
-enum BillingCycle {
-  MONTHLY
-  HALF_YEARLY
-  YEARLY
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  EXPIRED
-  CANCELLED
-  PENDING
-}
-
 enum OrderStatus {
   PENDING
   CONFIRMED
@@ -103,7 +83,6 @@ enum NotificationType {
   ORDER_SHIPPED
   ORDER_DELIVERED
   LOW_STOCK
-  SUBSCRIPTION_EXPIRING
   SELLER_APPROVED
   NEW_REVIEW
   RETURN_UPDATE
@@ -197,7 +176,6 @@ model Seller {
   updatedAt    DateTime     @updatedAt
 
   products     Product[]
-  subscription Subscription?
   orderItems   OrderItem[]
   offers       SellerOffer[]
   ratings      SellerRating[]
@@ -241,27 +219,6 @@ model Seller {
   @@index([status, rating])
   @@index([isVerified])
   @@index([totalOrders])
-}
-
-model Subscription {
-  id                     String             @id @default(cuid())
-  sellerId               String             @unique
-  seller                 Seller             @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  plan                   SubscriptionPlan   @default(TRIAL)
-  billingCycle           BillingCycle?
-  status                 SubscriptionStatus @default(ACTIVE)
-  startDate              DateTime           @default(now())
-  endDate                DateTime
-  trialEndDate           DateTime?          // Trial ends here
-  razorpaySubscriptionId String?
-  razorpayOrderId        String?
-  amount                 Float              @default(0)
-  reminderSent6d         Boolean            @default(false)
-  reminderSent7d         Boolean            @default(false)
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
-
-  payments Payment[]
 }
 
 model Category {
@@ -476,8 +433,6 @@ model Payment {
   user              User          @relation(fields: [userId], references: [id])
   orderId           String?
   order             Order?        @relation(fields: [orderId], references: [id])
-  subscriptionId    String?
-  subscription      Subscription? @relation(fields: [subscriptionId], references: [id])
   razorpayOrderId   String?
   razorpayPaymentId String?       @unique
   razorpaySignature String?
@@ -490,7 +445,6 @@ model Payment {
   @@index([razorpayPaymentId])
   @@index([razorpayOrderId])
   @@index([userId, status])
-  @@index([subscriptionId])
 }
 
 model Review {

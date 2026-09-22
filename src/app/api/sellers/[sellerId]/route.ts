@@ -12,7 +12,6 @@ export async function GET(
       db.seller.findUnique({
         where: { sellerId: params.sellerId, status: "APPROVED" },
         include: {
-          subscription: { select: { plan: true } },
           products: {
             where: { isActive: true },
             orderBy: { createdAt: "desc" },

@@ -18,7 +18,6 @@ interface SellerData {
     gstin?: string | null;
     bankAccount?: { id: string } | null;
     _count?: { transactions?: number };
-    subscription: { plan: string; status: string; endDate: string | Date } | null;
   } | null;
 }
 
@@ -128,7 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     return (
       <div className="flex min-h-screen bg-background">
-        <DashboardSidebar seller={seller} subscription={seller.subscription} />
+        <DashboardSidebar seller={seller} />
         <main className="flex-1 overflow-auto">
           <div className="mx-auto max-w-6xl px-4 py-6 pt-[4.5rem] pb-[5rem] sm:pt-6 sm:pb-6 md:pt-8 md:pb-8 sm:px-6">
             <BankDetailsBanner

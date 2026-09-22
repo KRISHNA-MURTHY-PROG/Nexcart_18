@@ -27,7 +27,6 @@ export default async function AdminSellersPage() {
       banner: true,
       createdAt: true,
       user: { select: { email: true, name: true } },
-      subscription: { select: { plan: true, status: true } },
       _count: { select: { products: true, orderItems: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -46,7 +45,6 @@ export default async function AdminSellersPage() {
             <tr className="border-b border-border/50 bg-muted/30">
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Seller</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground hidden sm:table-cell">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground hidden md:table-cell">Plan</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground hidden lg:table-cell">Products</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground hidden lg:table-cell">Orders</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground hidden md:table-cell">Joined</th>
@@ -66,11 +64,6 @@ export default async function AdminSellersPage() {
                 </td>
                 <td className="px-4 py-3 hidden sm:table-cell">
                   <span className="font-mono text-xs text-muted-foreground">{seller.sellerId}</span>
-                </td>
-                <td className="px-4 py-3 hidden md:table-cell">
-                  <Badge variant="secondary" className="text-[10px]">
-                    {seller.subscription?.plan || "FREE"}
-                  </Badge>
                 </td>
                 <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
                   {seller._count.products}
